@@ -49,13 +49,14 @@ public class Assinar {
 
     /**
      * @param stringXml
-     * @param tipoAssinatura      ('NFe' para nfe normal , 'infInut' para inutilizacao, 'evento'
-     *                  para eventos)
+     * @param tipoAssinatura ('NFe' para nfe normal , 'infInut' para inutilizacao, 'evento'
+     *                       para eventos)
      * @return String do Xml Assinado
      * @throws NfeException
      */
     public static String assinaNfe(ConfiguracoesNfe config, String stringXml, AssinaturaEnum tipoAssinatura) throws NfeException {
 
+        stringXml = stringXml.replaceAll("\r\n", "").replaceAll("\n", "").replaceAll(System.lineSeparator(), ""); // Erro quando tem salto de linha.
         stringXml = assinaDocNFe(config, stringXml, tipoAssinatura);
         stringXml = stringXml.replaceAll("&#13;", ""); // Java 11
 
@@ -73,7 +74,6 @@ public class Assinar {
             for (int i = 0; i < document.getDocumentElement().getElementsByTagName(tipoAssinatura.getTipo()).getLength(); i++) {
                 assinarNFe(tipoAssinatura, signatureFactory, transformList, privateKey, keyInfo, document, i);
             }
-
             return outputXML(document);
         } catch (SAXException | IOException | ParserConfigurationException | NoSuchAlgorithmException
                 | InvalidAlgorithmParameterException | KeyStoreException | UnrecoverableEntryException

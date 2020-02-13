@@ -32,7 +32,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.Base64;
+import java.util.GregorianCalendar;
+import java.util.List;
+import java.util.StringJoiner;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -57,6 +60,8 @@ public class XmlNfeUtil {
     private static final String RETORNO_ENVIO = "TRetEnviNFe";
     private static final String SITUACAO_NFE_RET = "TRetConsSitNFe";
     private static final String RET_RECIBO_NFE = "TRetConsReciNFe";
+    private static final String RET_STATUS_SERVICO = "TRetConsStatServ";
+    private static final String RET_CONS_CAD = "TRetConsCad";
 
     private static final String RET_ENV_EVENTO = "TRetEnvEvento";
 
@@ -66,6 +71,7 @@ public class XmlNfeUtil {
     private static final String TPROCCANCELARSUBST = "br.com.swconsultoria.nfe.schema.envEventoCancSubst.TProcEvento";
     private static final String TPROCCCE = "br.com.swconsultoria.nfe.schema.envcce.TProcEvento";
     private static final String TPROCEPEC = "br.com.swconsultoria.nfe.schema.envEpec.TProcEvento";
+    private static final String TPROCMAN = "br.com.swconsultoria.nfe.schema.envConfRecebto.TProcEvento";
 
     private static final String TProtNFe = "TProtNFe";
     private static final String TProtEnvi = "br.com.swconsultoria.nfe.schema_4.enviNFe.TProtNFe";
@@ -109,8 +115,8 @@ public class XmlNfeUtil {
      */
     public static <T> String objectToXml(Object obj) throws JAXBException, NfeException {
 
-        JAXBContext context = null;
-        JAXBElement<?> element = null;
+        JAXBContext context;
+        JAXBElement<?> element;
 
         switch (obj.getClass().getSimpleName()) {
 
@@ -169,6 +175,16 @@ public class XmlNfeUtil {
                 element = new br.com.swconsultoria.nfe.schema_4.retConsReciNFe.ObjectFactory().createRetConsReciNFe((br.com.swconsultoria.nfe.schema_4.retConsReciNFe.TRetConsReciNFe) obj);
                 break;
 
+            case RET_STATUS_SERVICO:
+                context = JAXBContext.newInstance(br.com.swconsultoria.nfe.schema_4.retConsStatServ.TRetConsStatServ.class);
+                element = new br.com.swconsultoria.nfe.schema_4.retConsStatServ.ObjectFactory().createRetConsStatServ((br.com.swconsultoria.nfe.schema_4.retConsStatServ.TRetConsStatServ) obj);
+                break;
+
+            case RET_CONS_CAD:
+                context = JAXBContext.newInstance(br.com.swconsultoria.nfe.schema.retConsCad.TRetConsCad.class);
+                element = new br.com.swconsultoria.nfe.schema.retConsCad.ObjectFactory().createRetConsCad((br.com.swconsultoria.nfe.schema.retConsCad.TRetConsCad) obj);
+                break;
+
             case TPROCEVENTO:
                 switch (obj.getClass().getName()) {
                     case TPROCCANCELAR:
@@ -187,6 +203,12 @@ public class XmlNfeUtil {
                         context = JAXBContext.newInstance(br.com.swconsultoria.nfe.schema.envEpec.TProcEvento.class);
                         element = XsdUtil.epec.createTProcEvento((br.com.swconsultoria.nfe.schema.envEpec.TProcEvento) obj);
                         break;
+                    case TPROCMAN:
+                        context = JAXBContext.newInstance(br.com.swconsultoria.nfe.schema.envConfRecebto.TProcEvento.class);
+                        element = XsdUtil.manifestacao.createTProcEvento((br.com.swconsultoria.nfe.schema.envConfRecebto.TProcEvento) obj);
+                        break;
+                    default:
+                        throw new NfeException("Objeto não mapeado no XmlUtil:" + obj.getClass().getSimpleName());
                 }
 
                 break;
@@ -228,6 +250,8 @@ public class XmlNfeUtil {
                         context = JAXBContext.newInstance(br.com.swconsultoria.nfe.schema.envConfRecebto.TEnvEvento.class);
                         element = new br.com.swconsultoria.nfe.schema.envConfRecebto.ObjectFactory().createEnvEvento((br.com.swconsultoria.nfe.schema.envConfRecebto.TEnvEvento) obj);
                         break;
+                    default:
+                        throw new NfeException("Objeto não mapeado no XmlUtil:" + obj.getClass().getSimpleName());
                 }
                 break;
 
@@ -253,6 +277,8 @@ public class XmlNfeUtil {
                         context = JAXBContext.newInstance(br.com.swconsultoria.nfe.schema.envConfRecebto.TRetEnvEvento.class);
                         element = XsdUtil.retEnvEvento.createTRetEnvEvento((br.com.swconsultoria.nfe.schema.envConfRecebto.TRetEnvEvento) obj);
                         break;
+                    default:
+                        throw new NfeException("Objeto não mapeado no XmlUtil:" + obj.getClass().getSimpleName());
                 }
                 break;
 
@@ -270,6 +296,8 @@ public class XmlNfeUtil {
                         context = JAXBContext.newInstance(br.com.swconsultoria.nfe.schema_4.retConsReciNFe.TProtNFe.class);
                         element = XsdUtil.retConsReciNfe.createTProtNFe((br.com.swconsultoria.nfe.schema_4.retConsReciNFe.TProtNFe) obj);
                         break;
+                    default:
+                        throw new NfeException("Objeto não mapeado no XmlUtil:" + obj.getClass().getSimpleName());
                 }
                 break;
 
@@ -380,9 +408,9 @@ public class XmlNfeUtil {
 
     public static byte[] geraHashCSRT(String chave, String csrt) throws NoSuchAlgorithmException {
 
-        ObjetoUtil.verifica(chave).orElseThrow( () -> new InvalidParameterException("Chave não deve ser nula ou vazia"));
-        ObjetoUtil.verifica(csrt).orElseThrow( () -> new InvalidParameterException("CSRT não deve ser nulo ou vazio"));
-        if(chave.length() != 44){
+        ObjetoUtil.verifica(chave).orElseThrow(() -> new InvalidParameterException("Chave não deve ser nula ou vazia"));
+        ObjetoUtil.verifica(csrt).orElseThrow(() -> new InvalidParameterException("CSRT não deve ser nulo ou vazio"));
+        if (chave.length() != 44) {
             throw new InvalidParameterException("Chave deve conter 44 caracteres.");
         }
         MessageDigest md = MessageDigest.getInstance("SHA-1");

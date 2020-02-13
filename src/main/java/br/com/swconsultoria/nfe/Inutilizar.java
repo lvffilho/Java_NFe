@@ -30,41 +30,39 @@ class Inutilizar {
     static TRetInutNFe inutiliza(ConfiguracoesNfe config, TInutNFe inutNFe, DocumentoEnum tipoDocumento, boolean validar)
             throws NfeException {
 
-        try {
+		try {
 
-            String xml = XmlNfeUtil.objectToXml(inutNFe);
-            xml = xml.replaceAll(" xmlns:ns2=\"http://www.w3.org/2000/09/xmldsig#\"", "");
-            xml = Assinar.assinaNfe(config, xml, AssinaturaEnum.INUTILIZACAO);
+			String xml = XmlNfeUtil.objectToXml(inutNFe);
+			xml = xml.replaceAll(" xmlns:ns2=\"http://www.w3.org/2000/09/xmldsig#\"", "");
+			xml = Assinar.assinaNfe(config, xml, AssinaturaEnum.INUTILIZACAO);
 
-            LoggerUtil.log(Inutilizar.class, "[XML-ENVIO]: " + xml);
+			LoggerUtil.log(Inutilizar.class, "[XML-ENVIO]: " + xml);
 
-            if (validar) {
-                new Validar().validaXml(config, xml, ServicosEnum.INUTILIZACAO);
-            }
+			if (validar) {
+				new Validar().validaXml(config, xml, ServicosEnum.INUTILIZACAO);
+			}
 
-            OMElement ome = AXIOMUtil.stringToOM(xml);
+			OMElement ome = AXIOMUtil.stringToOM(xml);
 
-            NFeInutilizacao4Stub.NfeDadosMsg dadosMsg = new NFeInutilizacao4Stub.NfeDadosMsg();
-            dadosMsg.setExtraElement(ome);
+			NFeInutilizacao4Stub.NfeDadosMsg dadosMsg = new NFeInutilizacao4Stub.NfeDadosMsg();
+			dadosMsg.setExtraElement(ome);
 
             NFeInutilizacao4Stub stub = new NFeInutilizacao4Stub(
                     WebServiceUtil.getUrl(config, tipoDocumento, ServicosEnum.INUTILIZACAO));
 
-            // Timeout
-            if (ObjetoUtil.verifica(config.getTimeout()).isPresent()) {
-                stub._getServiceClient().getOptions().setProperty(HTTPConstants.SO_TIMEOUT, config.getTimeout());
-                stub._getServiceClient().getOptions().setProperty(HTTPConstants.CONNECTION_TIMEOUT,
-                        config.getTimeout());
-            }
+				// Timeout
+				if (ObjetoUtil.verifica(config.getTimeout()).isPresent()) {
+					stub._getServiceClient().getOptions().setProperty(HTTPConstants.SO_TIMEOUT, config.getTimeout());
+					stub._getServiceClient().getOptions().setProperty(HTTPConstants.CONNECTION_TIMEOUT, config.getTimeout());
+				}
+			NFeInutilizacao4Stub.NfeResultMsg result = stub.nfeInutilizacaoNF(dadosMsg);
 
-            NFeInutilizacao4Stub.NfeResultMsg result = stub.nfeInutilizacaoNF(dadosMsg);
+			LoggerUtil.log(Inutilizar.class, "[XML-RETORNO]: " + result.getExtraElement().toString());
+			return XmlNfeUtil.xmlToObject(result.getExtraElement().toString(), TRetInutNFe.class);
+		} catch (RemoteException | XMLStreamException | JAXBException e) {
+			throw new NfeException(e.getMessage());
+		}
 
-            LoggerUtil.log(Inutilizar.class, "[XML-RETORNO]: " + result.getExtraElement().toString());
-            return XmlNfeUtil.xmlToObject(result.getExtraElement().toString(), TRetInutNFe.class);
-        } catch (RemoteException | XMLStreamException | JAXBException e) {
-            throw new NfeException(e.getMessage());
-        }
-
-    }
+	}
 
 }

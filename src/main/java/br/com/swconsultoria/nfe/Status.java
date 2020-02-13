@@ -76,6 +76,7 @@ class Status {
 
             NFeStatusServico4Stub stub = new NFeStatusServico4Stub(
                     WebServiceUtil.getUrl(config, tipoDocumento, ServicosEnum.STATUS_SERVICO));
+
             NFeStatusServico4Stub.NfeResultMsg result = stub.nfeStatusServicoNF(dadosMsg);
 
             LoggerUtil.log(Status.class, "[XML-RETORNO]: " + result.getExtraElement().toString());
